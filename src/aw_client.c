@@ -93,7 +93,7 @@ static time_t today_midnight(void) {
  * Handles both Firefox and Chromium watchers simultaneously.
  */
 static int find_web_buckets(char ids[MAX_WEB_BUCKETS][MAX_DOMAIN_LEN]) {
-    char *resp = http_get(AW_BASE_URL "/buckets");
+    char *resp = http_get(AW_BASE_URL "/buckets/");
     if (!resp) return 0;
 
     json_object *root = json_tokener_parse(resp);

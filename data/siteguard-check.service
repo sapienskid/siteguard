@@ -1,0 +1,6 @@
+[Unit]
+Description=SiteGuard periodic block check
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/siteguard --check

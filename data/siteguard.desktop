@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=SiteGuard
+Comment=Track and limit daily website usage
+Exec=/usr/local/bin/siteguard
+Icon=utilities-system-monitor
+Terminal=false
+Type=Application
+Categories=Utility;

@@ -64,7 +64,7 @@ static GtkWidget *make_site_row(const Site *s) {
         ? (double)s->used_sec / (double)s->budget_sec
         : 0.0;
     if (frac > 1.0) frac = 1.0;
-    gtk_progress_bar_set_fraction(progress, frac);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(progress), frac);
 
     if (s->blocked || s->used_sec >= s->budget_sec) {
         GtkStyleContext *ctx = gtk_widget_get_style_context(progress);
@@ -278,9 +278,8 @@ static void on_remove_clicked(GtkButton *btn, gpointer data) {
 
     if (site_idx < 0 || site_idx >= g_state->count) return;
 
-    /* Unblock before removing */
-    if (g_state->sites[site_idx].blocked)
-        blocker_unblock(g_state->sites[site_idx].domain);
+    /* Always unblock before removing - even if state is out of sync with /etc/hosts */
+    blocker_unblock(g_state->sites[site_idx].domain);
 
     /* Shift array down */
     for (int i = site_idx; i < g_state->count - 1; i++)

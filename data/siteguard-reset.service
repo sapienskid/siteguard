@@ -1,0 +1,6 @@
+[Unit]
+Description=SiteGuard daily reset (unblock all sites)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/siteguard --reset

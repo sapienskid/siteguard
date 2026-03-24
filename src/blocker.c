@@ -2,6 +2,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <stdio.h>
+#include <stdlib.h>
+
+static void flush_dns_cache(void) {
+}
 
 static int run_helper(const char *cmd, const char *domain) {
     pid_t pid = fork();
@@ -32,11 +36,15 @@ static int run_helper(const char *cmd, const char *domain) {
 }
 
 int blocker_block(const char *domain) {
-    return run_helper("block", domain);
+    int ret = run_helper("block", domain);
+    flush_dns_cache();
+    return ret;
 }
 
 int blocker_unblock(const char *domain) {
-    return run_helper("unblock", domain);
+    int ret = run_helper("unblock", domain);
+    flush_dns_cache();
+    return ret;
 }
 
 void blocker_sync(AppState *state) {
@@ -60,4 +68,5 @@ void blocker_unblock_all(AppState *state) {
         s->blocked    = false;
         s->used_sec   = 0;
     }
+    flush_dns_cache();
 }

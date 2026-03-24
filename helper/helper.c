@@ -19,10 +19,15 @@
 #include <ctype.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #define HOSTS_FILE "/etc/hosts"
 #define MARKER     "# siteguard-block"
-#define HOSTS_TMP  "/tmp/siteguard-hosts.tmp"
+#define HOSTS_TMP  "/etc/.siteguard-hosts.tmp"
+#define REDIRECT_HOST "127.0.0.1"
+#define REDIRECT_PORT "8080"
 
 /* Validate domain: only alphanumerics, dots, hyphens. No empty string. */
 static int valid_domain(const char *d) {
@@ -51,7 +56,7 @@ static int do_block(const char *domain) {
 
     f = fopen(HOSTS_FILE, "a");
     if (!f) { perror("siteguard-helper: fopen append"); return 1; }
-    fprintf(f, "127.0.0.1 %s www.%s %s\n", domain, domain, MARKER);
+    fprintf(f, REDIRECT_HOST " %s www.%s %s\n", domain, domain, MARKER);
     fclose(f);
     return 0;
 }
@@ -86,6 +91,28 @@ static int do_unblock(const char *domain) {
     return 0;
 }
 
+static void flush_dnsmasq(void) {
+    DIR *proc = opendir("/proc");
+    if (!proc) return;
+
+    struct dirent *entry;
+    while ((entry = readdir(proc)) != NULL) {
+        if (entry->d_type != DT_DIR) continue;
+        if (entry->d_name[0] < '0' || entry->d_name[0] > '9') continue;
+
+        char path[64], name[256];
+        snprintf(path, sizeof(path), "/proc/%s/comm", entry->d_name);
+        FILE *f = fopen(path, "r");
+        if (!f) continue;
+        if (fgets(name, sizeof(name), f) && strncmp(name, "dnsmasq", 7) == 0) {
+            pid_t pid = atoi(entry->d_name);
+            kill(pid, SIGHUP);
+        }
+        fclose(f);
+    }
+    closedir(proc);
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         fprintf(stderr, "Usage: siteguard-helper <block|unblock> <domain>\n");
@@ -100,8 +127,16 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    if (strcmp(cmd, "block") == 0)   return do_block(domain);
-    if (strcmp(cmd, "unblock") == 0) return do_unblock(domain);
+    int ret = 0;
+    if (strcmp(cmd, "block") == 0)   ret = do_block(domain);
+    else if (strcmp(cmd, "unblock") == 0) ret = do_unblock(domain);
+    else {
+        fprintf(stderr, "siteguard-helper: unknown command '%s'\n", cmd);
+        return 1;
+    }
+
+    if (ret == 0) flush_dnsmasq();
+    return ret;
 
     fprintf(stderr, "siteguard-helper: unknown command '%s'\n", cmd);
     return 1;
